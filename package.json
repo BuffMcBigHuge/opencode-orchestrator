@@ -1,0 +1,43 @@
+{
+    "name": "opencode-github-orchestrator",
+    "version": "2.0.0",
+    "description": "Autonomous AI-driven development system using OpenCode and GitHub",
+    "type": "module",
+    "main": "dist/index.js",
+    "scripts": {
+        "dev": "tsx src/index.ts",
+        "build": "tsc",
+        "debug": "tsx scripts/debug-opencode.ts",
+        "start": "node dist/index.js",
+        "lint": "eslint src --ext .ts",
+        "type-check": "tsc --noEmit",
+        "format": "prettier --write \"src/**/*.ts\""
+    },
+    "dependencies": {
+        "@octokit/graphql": "^7.0.2",
+        "@octokit/rest": "^20.0.2",
+        "dotenv": "^16.3.1",
+        "eventsource": "^2.0.2",
+        "node-cron": "^3.0.3",
+        "node-fetch": "^3.3.2",
+        "pino": "^8.17.2",
+        "pino-pretty": "^10.3.1",
+        "zod": "^3.22.4"
+    },
+    "devDependencies": {
+        "@types/eventsource": "^1.1.15",
+        "@types/node": "^20.10.6",
+        "@types/node-cron": "^3.0.11",
+        "@typescript-eslint/eslint-plugin": "^6.17.0",
+        "@typescript-eslint/parser": "^6.17.0",
+        "eslint": "^8.56.0",
+        "prettier": "^3.1.1",
+        "tsx": "^4.7.0",
+        "typescript": "^5.3.3"
+    },
+    "engines": {
+        "node": ">=20.0.0"
+    },
+    "author": "",
+    "license": "MIT"
+}

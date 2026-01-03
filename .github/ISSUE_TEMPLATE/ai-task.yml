@@ -1,0 +1,156 @@
+name: "🤖 AI Task"
+description: "Create a task for the AI orchestrator to work on"
+title: "[AI Task]: "
+labels: ["ai-task", "ai-priority:medium"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🤖 AI-Driven Development Task
+        
+        This issue will be picked up by the OpenCode Orchestrator for autonomous implementation.
+        
+        **What happens next:**
+        1. The AI agent will analyze your request
+        2. Explore the codebase for relevant patterns
+        3. Implement changes in an isolated worktree
+        4. Run quality gates (lint, type-check, build, tests)
+        5. Create a PR for your review
+        
+        > **Note:** For urgent tasks, change the priority label to `ai-priority:high`
+
+  - type: dropdown
+    id: task-type
+    attributes:
+      label: Task Type
+      description: What kind of work is this?
+      options:
+        - "✨ Feature - New functionality"
+        - "🐛 Bug Fix - Something is broken"
+        - "♻️ Refactor - Code improvement without behavior change"
+        - "📚 Documentation - Docs, comments, or README updates"
+        - "🧪 Testing - Add or improve tests"
+        - "🔧 Chore - Build, CI, or tooling changes"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How urgent is this task?
+      default: 1
+      options:
+        - "🔵 Low - When you get to it"
+        - "🟡 Medium - Normal priority"
+        - "🔴 High - Urgent, prioritize this"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Task Description
+      description: |
+        Describe what needs to be done. Be specific and provide context.
+        
+        **Tips for good descriptions:**
+        - Explain the "why" not just the "what"
+        - Reference existing files/functions if relevant
+        - Include examples of expected behavior
+      placeholder: |
+        Example: 
+        Add a dark mode toggle to the settings page. 
+        
+        The toggle should:
+        - Persist user preference in localStorage
+        - Apply to all pages immediately
+        - Use the existing color tokens from `theme.css`
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: How will we know when this task is complete?
+      placeholder: |
+        - [ ] Toggle component is added to settings page
+        - [ ] Dark mode styles are applied consistently
+        - [ ] User preference persists across sessions
+        - [ ] No visual regressions in existing UI
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-notes
+    attributes:
+      label: Technical Notes (Optional)
+      description: Any specific technical requirements, constraints, or suggestions
+      placeholder: |
+        - Use the existing `useTheme` hook if available
+        - Follow the patterns in `src/components/Settings/`
+        - Consider accessibility (prefers-color-scheme)
+    validations:
+      required: false
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Related Issues/PRs (Optional)
+      description: Link any related issues, PRs, or documentation
+      placeholder: |
+        - Related to #123
+        - Depends on PR #456
+        - See ADR-007 for context
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: testing-requirements
+    attributes:
+      label: Testing Requirements
+      description: What testing should be included?
+      options:
+        - label: Unit tests for new functions/components
+          required: false
+        - label: Integration tests for API endpoints
+          required: false
+        - label: E2E tests with Playwright for user flows
+          required: false
+        - label: Update existing tests if behavior changes
+          required: false
+
+  - type: dropdown
+    id: documentation
+    attributes:
+      label: Documentation Requirements
+      description: What documentation updates are needed?
+      default: 0
+      options:
+        - "None needed"
+        - "Update README"
+        - "Add JSDoc/TSDoc comments"
+        - "Update API documentation"
+        - "Create/update user guide"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ## 📋 Labels Reference
+        
+        | Label | Description |
+        |-------|-------------|
+        | `ai-task` | Ready for AI pickup |
+        | `ai-priority:high` | Urgent priority |
+        | `ai-priority:medium` | Normal priority (default) |
+        | `ai-priority:low` | Low priority |
+        | `ai-in-progress` | Currently being worked on |
+        | `ai-blocked` | Waiting for clarification |
+        | `ai-review-ready` | PR created, awaiting review |

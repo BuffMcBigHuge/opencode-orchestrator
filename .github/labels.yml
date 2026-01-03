@@ -1,0 +1,45 @@
+# AI Task Labels Configuration
+# 
+# Run this command to create these labels in your repository:
+# gh label create "ai-task" --color "238636" --description "Ready for AI pickup"
+# gh label create "ai-priority:high" --color "d73a4a" --description "High priority - urgent"
+# gh label create "ai-priority:medium" --color "fbca04" --description "Medium priority - normal"
+# gh label create "ai-priority:low" --color "0e8a16" --description "Low priority"
+# gh label create "ai-in-progress" --color "d97706" --description "Currently being worked on by AI"
+# gh label create "ai-blocked" --color "7c3aed" --description "Waiting for human clarification"
+# gh label create "ai-review-ready" --color "06b6d4" --description "PR created, awaiting human review"
+# gh label create "ai-debugging" --color "f59e0b" --description "Task failed, needs manual debugging"
+
+---
+labels:
+  - name: ai-task
+    color: "238636"
+    description: "Ready for AI pickup"
+  
+  - name: ai-priority:high
+    color: "d73a4a"
+    description: "🔴 High priority - urgent"
+  
+  - name: ai-priority:medium
+    color: "fbca04"
+    description: "🟡 Medium priority - normal"
+  
+  - name: ai-priority:low
+    color: "0e8a16"
+    description: "🔵 Low priority"
+  
+  - name: ai-in-progress
+    color: "d97706"
+    description: "🟠 Currently being worked on by AI"
+  
+  - name: ai-blocked
+    color: "7c3aed"
+    description: "🟣 Waiting for human clarification"
+  
+  - name: ai-review-ready
+    color: "06b6d4"
+    description: "🩵 PR created, awaiting human review"
+  
+  - name: ai-debugging
+    color: "f59e0b"
+    description: "🔶 Task failed, needs manual debugging"
