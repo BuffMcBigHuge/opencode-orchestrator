@@ -625,13 +625,56 @@ export class OpenCodeManager {
                     this.onTaskComplete(issueNumber);
                 }
             }
-        } else if (eventType === 'session.status' || eventType === 'session.error' || eventType === 'session.blocked') {
-            // Handle session status changes that might indicate errors
+        } else if (eventType === 'session.error') {
+            // Handle session.error events - these are the red error messages in the TUI
+            // These include: ProviderAuthError, APIError, MessageOutputLengthError, MessageAbortedError, UnknownError
+            const error = event.properties?.error;
+            let errorMessage = 'An error occurred';
+            let errorType = 'UnknownError';
+            let statusCode: number | undefined;
+
+            if (error && typeof error === 'object') {
+                errorType = error.name || 'UnknownError';
+                const data = error.data;
+                if (data && typeof data === 'object') {
+                    if ('message' in data && typeof data.message === 'string') {
+                        errorMessage = data.message;
+                    }
+                    if ('statusCode' in data && typeof data.statusCode === 'number') {
+                        statusCode = data.statusCode;
+                    }
+                }
+            } else if (error) {
+                errorMessage = String(error);
+            }
+
+            logger.error({
+                issueNumber,
+                sessionId: event.sessionID || event.properties?.sessionID || task.sessionId,
+                errorType,
+                errorMessage,
+                statusCode,
+                fullError: error
+            }, 'OpenCode session error event');
+
+            // Format console output with color coding based on error type
+            const statusStr = statusCode ? ` (${statusCode})` : '';
+            console.log(`\n\x1b[31m🔴 Session Error [${errorType}]${statusStr}: ${errorMessage}\x1b[0m`);
+
+            // Handle error (revert labels, post comment) only once per task
+            if (!task.errorHandled) {
+                task.errorHandled = true;
+                this.handleSessionError(issueNumber, error, task.shareLink).catch((err) => {
+                    logger.error({ issueNumber, error: err }, 'Failed to handle session error');
+                });
+            }
+        } else if (eventType === 'session.status' || eventType === 'session.blocked') {
+            // Handle other session status changes that might indicate errors
             const statusData = event.properties || event;
             const state = statusData.state || statusData.status;
             const error = statusData.error || event.error;
 
-            if (error || state === 'error' || state === 'error' || state === 'blocked') {
+            if (error || state === 'error' || state === 'blocked') {
                 // Only handle error once per task
                 if (!task.errorHandled) {
                     task.errorHandled = true;
@@ -642,7 +685,7 @@ export class OpenCodeManager {
                         state,
                         error,
                         fullEvent: event
-                    }, 'OpenCode session error/blocked detected');
+                    }, 'OpenCode session status error/blocked detected');
                     console.log(`\x1b[33m⚠️ Session ${eventType}: state=${state}${error ? ', error=' + (error.message || error.name || 'unknown') : ''}\x1b[0m`);
 
                     // Revert issue back to ai-task so it can be retried
