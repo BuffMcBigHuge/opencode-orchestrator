@@ -13,10 +13,10 @@ export function generateOrchestratorPrompt(
    const { owner, repo } = getRepoInfo(config);
 
    // Sort comments by creation date to show chronological progress
-   const sortedComments = [...issue.comments].sort((a, b) => 
+   const sortedComments = [...issue.comments].sort((a, b) =>
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
    );
-   
+
    const commentsSection = sortedComments.length > 0
       ? sortedComments.map(c => `**${c.author}** (${c.createdAt}):\n${c.body}`).join('\n\n---\n\n')
       : '_No comments yet_';
@@ -150,65 +150,108 @@ You have access to Ralph Loop - use it strategically for:
 - Completion signal: \`<promise>DONE</promise>\`
 - Auto-continue: true
 
-## GitHub Operations
+## gh CLI Reference
 
-Use the \\\`gh\\\` CLI for ALL GitHub operations:
+Use \\\`gh\\\` for ALL GitHub operations.
 
-**Comments:**
+**Comments (use --body-file for multi-line to avoid escaping):**
 \\\`\\\`\\\`bash
-gh issue comment ${issue.number} --body "Your message here"
+# Simple
+gh issue comment ${issue.number} --body "Status update"
+
+# Multi-line (recommended)
+cat > /tmp/comment_$$.md << 'EOF'
+## Update
+- [x] Done
+- [ ] Next
+EOF
+gh issue comment ${issue.number} --body-file /tmp/comment_$$.md
+rm /tmp/comment_$$.md
 \\\`\\\`\\\`
 
-**Labels:**
+**Labels (atomic swap recommended):**
 \\\`\\\`\\\`bash
-gh issue edit ${issue.number} --add-label "label-name"
-gh issue edit ${issue.number} --remove-label "label-name"
+gh issue edit ${issue.number} --remove-label "ai-task" --add-label "ai-in-progress"
+gh issue edit ${issue.number} --add-label "ai-blocked"
+gh issue edit ${issue.number} --remove-label "ai-in-progress" --add-label "ai-review-ready"
 \\\`\\\`\\\`
 
-**Create PR:**
+**Create PR (use --body-file):**
 \\\`\\\`\\\`bash
-gh pr create --title "Title" --body "Description" --base main
+cat > /tmp/pr_$$.md << 'EOF'
+## Summary
+Changes for issue.
+
+## Changes
+- Item 1
+- Item 2
+
+Closes #${issue.number}
+EOF
+gh pr create --title "feat: title (#${issue.number})" --body-file /tmp/pr_$$.md --base main
+rm /tmp/pr_$$.md
 \\\`\\\`\\\`
 
-**Check CI Status:**
+**Status checks:**
 \\\`\\\`\\\`bash
 gh pr checks
+gh pr view --json state,statusCheckRollup
+gh issue view ${issue.number} --json labels
 \\\`\\\`\\\`
+
+**Best practices:** Use --body-file for markdown content. Use $$ in temp filenames (PID). Clean up temp files.
 
 ## Critical Rules
 
-1. **NEVER merge PRs** - Only create them. Humans review and merge.
-2. **NEVER push to main** - Only work on your feature branch.
-3. **ASK when uncertain** - Better to block and ask than to implement incorrectly.
-4. **QUALITY FIRST** - Do NOT create PR until all quality gates pass.
-5. **CI MUST PASS** - Wait for CI success before creating PR.
-6. **TEST EVERYTHING** - Use Ralph Loop to ensure tests pass.
-7. **Document everything** - Your work should be self-explanatory.
+1. NEVER merge PRs - only create them
+2. NEVER push to main - use feature branch only
+3. ASK when uncertain - block and ask > implement wrong
+4. QUALITY FIRST - all gates pass before PR
+5. CI MUST PASS - wait for green before PR
+6. TEST EVERYTHING - use Ralph Loop
+7. DOCUMENT - work should be self-explanatory
 
-## Labels Reference
+## Lifecycle Labels (State Machine)
 
-- \\\`ai-in-progress\\\`: Currently being worked on (YOU must apply this at start)
-- \\\`ai-blocked\\\`: Need clarification (add this + post comment with question)
-- \\\`ai-review-ready\\\`: PR created (apply when done, remove ai-in-progress)
+Labels = source of truth for orchestration.
+
+ai-task → ai-in-progress → ai-review-ready
+                ↓ (stuck)
+            ai-blocked → (human replies) → resume
+
+**Labels:**
+- \\\`ai-task\\\` (green): Ready for pickup. Remove at start, add ai-in-progress.
+- \\\`ai-in-progress\\\` (yellow): You're working. Keep until done or blocked.
+- \\\`ai-blocked\\\` (purple): Waiting for human. Add + post question. Remove when answered.
+- \\\`ai-review-ready\\\` (blue): PR created. Add when done, remove ai-in-progress.
+- \\\`ai-debugging\\\` (red): Error state, auto-set on failures.
+
+**Priority (optional):**
+- \\\`ai-priority:high\\\` - process first
+- \\\`ai-priority:medium\\\` - normal
+- \\\`ai-priority:low\\\` - when idle
+
+ALWAYS update labels to reflect state.
 
 ## Progress Updates (REQUIRED)
 
-**You MUST post progress comments whenever you complete significant work:**
+Post comments when:
+- Phase starts (checkpoint with plan)
+- Subtask completes (update todos)
+- 10+ min elapsed (interim status)
+- Blocked (question + ai-blocked label)
+- Error (details + ai-blocked label)
+- Done (PR link + summary)
 
-1. **After completing each major subtask/todo** - Post a brief update
-2. **When todos change status** - Update the issue with your progress
-3. **Before starting a new phase** - Post a checkpoint comment
+Use --body-file for all multi-line updates.
 
-Example progress comment format:
-\\\`\\\`\\\`bash
-gh issue comment ${issue.number} --body "## ✅ Completed: [Task Name]
+## Execution Framework
 
-- [x] Subtask 1
-- [x] Subtask 2
-- [ ] Subtask 3 (in progress)
-
-**Next:** Starting on [next task]"
-\\\`\\\`\\\`
+For each phase:
+1. OBSERVE - current state, what do I know?
+2. THINK - what next, what risks?
+3. ACT - execute action
+4. VERIFY - success? update state/labels
 
 ## Begin
 
@@ -228,10 +271,10 @@ export function generateContinuationPrompt(
    const { owner, repo } = getRepoInfo(config);
 
    // Sort comments by creation date to show chronological progress
-   const sortedComments = [...issue.comments].sort((a, b) => 
+   const sortedComments = [...issue.comments].sort((a, b) =>
       new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
    );
-   
+
    const commentsSection = sortedComments.length > 0
       ? sortedComments.map(c => `**${c.author}** (${c.createdAt}):\n${c.body}`).join('\n\n---\n\n')
       : '_No comments yet_';
@@ -293,26 +336,47 @@ Remember:
 - Run quality gates before creating PR
 - Create the PR when done
 
-## GitHub Operations
+## gh CLI Reference
 
-Use \\\`gh\\\` CLI for ALL GitHub operations:
-- \\\`gh issue comment ${issue.number} --body "..."\\\` - Post comments
-- \\\`gh issue edit ${issue.number} --add-label "..."\\\` - Add labels
-- \\\`gh issue edit ${issue.number} --remove-label "..."\\\` - Remove labels
-- \\\`gh pr create --title "..." --body "..." --base main\\\` - Create PR
+Use \`gh\` for ALL GitHub operations.
+
+**Comments (use --body-file for multi-line):**
+\`\`\`bash
+cat > /tmp/comment_$$.md << 'EOF'
+## Update
+Content here
+EOF
+gh issue comment ${issue.number} --body-file /tmp/comment_$$.md
+rm /tmp/comment_$$.md
+\`\`\`
+
+**Labels:**
+\`\`\`bash
+gh issue edit ${issue.number} --remove-label "ai-blocked"
+gh issue edit ${issue.number} --remove-label "ai-in-progress" --add-label "ai-review-ready"
+\`\`\`
+
+**Create PR:**
+\`\`\`bash
+gh pr create --title "feat: title (#${issue.number})" --body-file /tmp/pr_$$.md --base main
+\`\`\`
 
 ## Critical Rules
 
-1. **NEVER merge PRs** - Only create them. Humans review and merge.
-2. **NEVER push to main** - Only work on your feature branch.
-3. **QUALITY FIRST** - Do NOT create PR until all quality gates pass.
-4. **CI MUST PASS** - Wait for CI success before creating PR.
+1. NEVER merge PRs - only create them
+2. NEVER push to main - use feature branch only
+3. QUALITY FIRST - all gates pass before PR
+4. CI MUST PASS - wait for green before PR
 
-## Labels Reference
+## Lifecycle Labels
 
-- \\\`ai-in-progress\\\`: Currently being worked on
-- \\\`ai-blocked\\\`: Need clarification (add this + post comment with question)
-- \\\`ai-review-ready\\\`: PR created (apply when done, remove ai-in-progress)
+ai-task → ai-in-progress → ai-review-ready
+                ↓ (stuck)
+            ai-blocked → (human replies) → resume
+
+- \`ai-in-progress\`: You're working
+- \`ai-blocked\`: Waiting for human (add + post question)
+- \`ai-review-ready\`: PR created (add when done)
 
 ## Continue
 
