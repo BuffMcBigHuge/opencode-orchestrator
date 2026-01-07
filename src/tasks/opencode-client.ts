@@ -330,8 +330,33 @@ export class OpenCodeServerClient {
 
         const eventSource = new EventSource(eventUrl);
 
+        // Track connection attempts to detect rapid reconnection loops
+        let connectionAttempts = 0;
+        let lastConnectionTime = Date.now();
+
         eventSource.onopen = () => {
-            logger.info({ sessionId }, 'Event stream connection opened');
+            connectionAttempts++;
+            const now = Date.now();
+            const timeSinceLastConnection = now - lastConnectionTime;
+            lastConnectionTime = now;
+
+            // Warn if reconnecting too frequently (< 1 second between connections)
+            if (connectionAttempts > 1 && timeSinceLastConnection < 1000) {
+                logger.warn({ 
+                    sessionId, 
+                    connectionAttempts,
+                    timeSinceLastConnection,
+                    eventUrl 
+                }, 'EventSource reconnecting rapidly - possible connection issue');
+                console.log(`\x1b[33m⚠️ EventSource rapid reconnection detected (${timeSinceLastConnection}ms since last)\x1b[0m`);
+            }
+
+            logger.info({ 
+                sessionId, 
+                connectionAttempts,
+                eventUrl,
+                readyState: eventSource.readyState 
+            }, 'Event stream connection opened');
         };
 
         eventSource.onmessage = (event) => {
@@ -363,9 +388,43 @@ export class OpenCodeServerClient {
         };
 
         eventSource.onerror = (error: any) => {
-            logger.error({ error, sessionId }, 'Event stream error');
-            // Cast to Error if it looks like one, or create new Error
-            const err = error instanceof Error ? error : new Error(String(error));
+            // Extract more details from EventSource error
+            const errorDetails: any = {
+                type: error?.type,
+                message: error?.message || '',
+                status: error?.status,
+                statusText: error?.statusText,
+                readyState: eventSource.readyState,
+                // readyState values: 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
+                readyStateText: eventSource.readyState === 0 ? 'CONNECTING' : 
+                               eventSource.readyState === 1 ? 'OPEN' : 'CLOSED',
+                url: eventSource.url,
+                // Full error object for debugging
+                fullError: error
+            };
+
+            logger.error({ 
+                sessionId, 
+                errorDetails,
+                // Log individual fields for easy filtering in logs
+                readyState: errorDetails.readyState,
+                readyStateText: errorDetails.readyStateText,
+                errorType: error?.type,
+                errorMessage: error?.message
+            }, 'Event stream error');
+
+            // Also log to console for immediate visibility
+            console.log(`\x1b[31m❌ EventSource Error (readyState: ${errorDetails.readyStateText}):\x1b[0m`, {
+                type: error?.type,
+                message: error?.message || '(no message)',
+                status: error?.status,
+                url: eventSource.url
+            });
+
+            // Cast to Error if it looks like one, or create new Error with details
+            const err = error instanceof Error ? error : new Error(
+                `EventSource error: ${error?.type || 'unknown'} - ${error?.message || 'no details'}`
+            );
             onError?.(err);
         };
 

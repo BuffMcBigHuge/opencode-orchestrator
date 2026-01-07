@@ -33,9 +33,16 @@ class GitHubTaskOrchestrator {
      * Start the orchestrator
      */
     async start(): Promise<void> {
+        // Extract project name from config directory or repo
+        const configDir = process.env.CONFIG_DIR || '.';
+        const projectName = configDir.split('/').pop() || this.config.github.repo.split('/').pop() || 'default';
+        
         logger.info('Starting GitHub Task Orchestrator v2.0');
         logger.info({
+            project: projectName,
+            configDir: process.env.CONFIG_DIR || '(root .env)',
             repo: this.config.github.repo,
+            projectPath: this.config.opencode.projectPath,
             pollInterval: this.config.scheduler.pollIntervalMs,
             maxConcurrent: this.config.scheduler.maxConcurrentTasks,
         }, 'Configuration loaded');
@@ -70,7 +77,23 @@ class GitHubTaskOrchestrator {
         });
 
         logger.info({ cronExpression }, 'Scheduler started');
-        logger.info('✅ Orchestrator is running and waiting for tasks. Press Ctrl+C to stop.');
+        
+        // Display nice startup banner
+        const configDirDisplay = process.env.CONFIG_DIR || '(root)';
+        const repoName = this.config.github.repo;
+        console.log('\n╔════════════════════════════════════════════════════════════════╗');
+        console.log(`║  ✅ Orchestrator Running                                       ║`);
+        console.log('╠════════════════════════════════════════════════════════════════╣');
+        console.log(`║  📁 Config:  ${configDirDisplay.padEnd(48)} ║`);
+        console.log(`║  📦 Repo:    ${repoName.padEnd(48)} ║`);
+        console.log(`║  📂 Path:    ${this.config.opencode.projectPath.substring(0, 48).padEnd(48)} ║`);
+        console.log(`║  ⏱️  Poll:    Every ${intervalMinutes} min${intervalMinutes !== 1 ? 's' : ' '}${('').padEnd(37)} ║`);
+        console.log(`║  🔢 Tasks:   Max ${this.config.scheduler.maxConcurrentTasks} concurrent${('').padEnd(38)} ║`);
+        console.log('╠════════════════════════════════════════════════════════════════╣');
+        console.log('║  Press Ctrl+C to stop                                          ║');
+        console.log('╚════════════════════════════════════════════════════════════════╝\n');
+        
+        logger.info('Orchestrator is running and waiting for tasks');
     }
 
     /**
@@ -194,7 +217,12 @@ class GitHubTaskOrchestrator {
 // Main entry point
 async function main(): Promise<void> {
     try {
-        console.log('🚀 Starting OpenCode GitHub Orchestrator...');
+        const configDir = process.env.CONFIG_DIR;
+        const projectInfo = configDir 
+            ? ` [${configDir.split('/').pop()}]` 
+            : '';
+        
+        console.log(`🚀 Starting OpenCode GitHub Orchestrator${projectInfo}...`);
         const orchestrator = new GitHubTaskOrchestrator();
         await orchestrator.start();
         // Process will stay alive due to cron scheduler

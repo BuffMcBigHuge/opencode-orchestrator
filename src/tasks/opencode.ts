@@ -320,8 +320,20 @@ export class OpenCodeManager {
                 this.handleEvent(task, event);
             },
             (error: Error) => {
-                logger.error({ issueNumber: task.issueNumber, error }, 'Event stream error');
+                logger.error({ 
+                    issueNumber: task.issueNumber, 
+                    sessionId: task.sessionId,
+                    error,
+                    errorMessage: error.message,
+                    errorName: error.name,
+                    errorStack: error.stack
+                }, 'Event stream error in task handler');
+                
+                // Log to console for visibility
+                console.log(`\x1b[33m⚠️ Event stream error for issue #${task.issueNumber}: ${error.message}\x1b[0m`);
+                
                 // Don't kill the task on stream error, rely on retry or eventual completion
+                // EventSource will automatically try to reconnect
             },
             task.sessionId
         );
