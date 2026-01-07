@@ -28,3 +28,7 @@ Thumbs.db
 
 # Test coverage
 coverage/
+
+.specstory/
+
+.worktrees/
