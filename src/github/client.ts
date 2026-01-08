@@ -11,6 +11,7 @@ export interface Issue {
     body: string;
     labels: string[];
     comments: Comment[];
+    author: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -86,6 +87,7 @@ export class GitHubClient {
                         body: issue.body || '',
                         labels: issue.labels.map((l) => (typeof l === 'string' ? l : l.name || '')),
                         comments,
+                        author: issue.user?.login || 'unknown',
                         createdAt: issue.created_at,
                         updatedAt: issue.updated_at,
                     };
