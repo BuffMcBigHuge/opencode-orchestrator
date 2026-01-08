@@ -1,0 +1,143 @@
+# Dockerfile for OpenCode Orchestrator
+#
+# This Dockerfile creates a containerized orchestrator instance.
+# Each container can monitor a different GitHub repository.
+#
+# Build:
+#   docker build -t opencode-orchestrator .
+#
+# Run (single instance):
+#   docker run -d \
+#     --name orchestrator-myproject \
+#     --env-file ./configs/myproject/.env \
+#     -v /path/to/project:/workspace:rw \
+#     -v ./configs/myproject/logs:/app/logs:rw \
+#     opencode-orchestrator
+#
+# For multi-project deployments, use docker-compose.example.yml
+
+FROM node:20-alpine
+
+# Install git (required for worktree operations)
+RUN apk add --no-cache git
+
+# Create app directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production
+
+# Copy built orchestrator code
+# Note: You must run `npm run build` before building the Docker image
+COPY dist ./dist
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S orchestrator && \
+    adduser -S orchestrator -u 1001 && \
+    chown -R orchestrator:orchestrator /app
+
+# Create directories for logs and config
+RUN mkdir -p /app/logs && \
+    chown -R orchestrator:orchestrator /app/logs
+
+# Switch to non-root user
+USER orchestrator
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "process.exit(0)" || exit 1
+
+# Set environment
+ENV NODE_ENV=production
+
+# Expose port (if needed for future monitoring/status endpoint)
+# EXPOSE 3000
+
+# Start the orchestrator
+CMD ["node", "dist/index.js"]
+
+# ============================================
+# Build and Usage Instructions
+# ============================================
+#
+# 1. Build the orchestrator first:
+#    npm run build
+#
+# 2. Build Docker image:
+#    docker build -t opencode-orchestrator .
+#
+# 3. Run single instance:
+#    docker run -d \
+#      --name orchestrator-website \
+#      --env-file ./configs/website/.env \
+#      -v /home/user/repos/website:/workspace:rw \
+#      -v ./configs/website/logs:/app/logs:rw \
+#      --restart unless-stopped \
+#      --memory 1g \
+#      --cpus 0.5 \
+#      opencode-orchestrator
+#
+# 4. View logs:
+#    docker logs -f orchestrator-website
+#
+# 5. Stop container:
+#    docker stop orchestrator-website
+#
+# 6. Remove container:
+#    docker rm orchestrator-website
+#
+# ============================================
+# Multi-Project with Docker Compose
+# ============================================
+#
+# For running multiple projects, use docker-compose:
+#
+# 1. Copy docker-compose.example.yml to docker-compose.yml
+# 2. Update paths and project names
+# 3. Create .env files for each project
+# 4. Run: docker-compose up -d
+#
+# See docker-compose.example.yml for full configuration.
+#
+# ============================================
+# Environment Variables
+# ============================================
+#
+# Required (via .env file or -e flags):
+#   - GITHUB_TOKEN
+#   - GITHUB_REPO
+#   - GITHUB_USERNAME
+#   - PROJECT_PATH (should be /workspace when using volume mount)
+#
+# Optional:
+#   - POLL_INTERVAL_MS
+#   - MAX_CONCURRENT_TASKS
+#   - WORKTREE_DIR
+#   - See docs/ENV_EXAMPLE.md for full list
+#
+# ============================================
+# Volume Mounts
+# ============================================
+#
+# Required volumes:
+#   - Project repository: -v /path/to/repo:/workspace:rw
+#   - Logs: -v ./logs:/app/logs:rw (optional but recommended)
+#
+# Optional volumes:
+#   - OpenCode config: -v ~/.config/opencode:/home/orchestrator/.config/opencode:ro
+#
+# ============================================
+# Networking
+# ============================================
+#
+# If OpenCode server is running on host:
+#   - Use --network host
+#   - Or set OPENCODE_SERVER_URL to host IP
+#
+# If OpenCode server is in Docker:
+#   - Create custom network: docker network create orchestrator-net
+#   - Connect both containers to it
+#   - Set OPENCODE_SERVER_URL to container name

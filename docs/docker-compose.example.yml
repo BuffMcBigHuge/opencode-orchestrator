@@ -1,0 +1,191 @@
+# Docker Compose Configuration for Multi-Project Orchestrator
+#
+# This file sets up multiple orchestrator containers, one per project.
+# Each container is isolated and manages its own GitHub repository.
+#
+# Prerequisites:
+#   1. Build the orchestrator Docker image (see Dockerfile.example)
+#   2. Create .env files for each project in ./configs/PROJECT_NAME/.env
+#   3. Update volume paths to point to your actual project repositories
+#
+# Usage:
+#   docker-compose up -d                    # Start all containers
+#   docker-compose logs -f website          # View logs for one project
+#   docker-compose ps                       # View status
+#   docker-compose down                     # Stop all containers
+#
+# File location: docker-compose.yml
+
+version: '3.8'
+
+services:
+  # ============================================
+  # Project 1: Website
+  # ============================================
+  orchestrator-website:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orchestrator-website
+    restart: unless-stopped
+    
+    # Environment configuration
+    env_file:
+      - ./configs/website/.env
+    
+    # Mount project repository and config logs
+    volumes:
+      - /path/to/repos/website:/workspace:rw
+      - ./configs/website/logs:/app/logs:rw
+      # Optional: Share OpenCode config (if not using default)
+      # - ~/.config/opencode:/home/orchestrator/.config/opencode:ro
+    
+    # Resource limits
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: 0.5
+    
+    # Networking (if OpenCode server is in Docker)
+    # network_mode: "host"  # Or create a custom network
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================
+  # Project 2: Mobile App
+  # ============================================
+  orchestrator-mobile-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orchestrator-mobile-app
+    restart: unless-stopped
+    
+    env_file:
+      - ./configs/mobile-app/.env
+    
+    volumes:
+      - /path/to/repos/mobile-app:/workspace:rw
+      - ./configs/mobile-app/logs:/app/logs:rw
+    
+    # Mobile builds might need more resources
+    mem_limit: 2g
+    mem_reservation: 1g
+    cpus: 1.0
+    
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================
+  # Project 3: Backend API
+  # ============================================
+  orchestrator-backend-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orchestrator-backend-api
+    restart: unless-stopped
+    
+    env_file:
+      - ./configs/backend-api/.env
+    
+    volumes:
+      - /path/to/repos/backend-api:/workspace:rw
+      - ./configs/backend-api/logs:/app/logs:rw
+    
+    mem_limit: 1g
+    mem_reservation: 512m
+    cpus: 0.5
+    
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Add more projects by copying the structure above
+
+# ============================================
+# Optional: Shared Network
+# ============================================
+# Uncomment if you need containers to communicate (e.g., shared OpenCode server)
+# networks:
+#   orchestrator-network:
+#     driver: bridge
+
+# ============================================
+# Optional: Shared Volumes
+# ============================================
+# Uncomment if you want to persist data outside containers
+# volumes:
+#   opencode-cache:
+#   npm-cache:
+
+# ============================================
+# Docker Compose Commands
+# ============================================
+#
+# Start all services:
+#   docker-compose up -d
+#
+# Start specific service:
+#   docker-compose up -d orchestrator-website
+#
+# View all logs:
+#   docker-compose logs -f
+#
+# View specific service logs:
+#   docker-compose logs -f orchestrator-website
+#
+# View status:
+#   docker-compose ps
+#
+# Stop all:
+#   docker-compose down
+#
+# Stop and remove volumes:
+#   docker-compose down -v
+#
+# Restart specific service:
+#   docker-compose restart orchestrator-website
+#
+# View resource usage:
+#   docker stats
+#
+# Execute command in container:
+#   docker-compose exec orchestrator-website sh
+#
+# Rebuild and restart:
+#   docker-compose up -d --build
+#
+# Scale a service (if needed):
+#   docker-compose up -d --scale orchestrator-website=2
