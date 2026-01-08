@@ -10,6 +10,7 @@ export const Labels = {
     AI_BLOCKED: 'ai-blocked',
     AI_REVIEW_READY: 'ai-review-ready',
     AI_DEBUGGING: 'ai-debugging',
+    AI_APPROVED: 'ai-approved',
     PRIORITY_HIGH: 'ai-priority:high',
     PRIORITY_MEDIUM: 'ai-priority:medium',
     PRIORITY_LOW: 'ai-priority:low',
@@ -24,6 +25,7 @@ export const LabelColors = {
     [Labels.AI_BLOCKED]: '7057ff', // Purple
     [Labels.AI_REVIEW_READY]: '1d76db', // Blue
     [Labels.AI_DEBUGGING]: 'd93f0b', // Red/Orange
+    [Labels.AI_APPROVED]: '0e8a16', // Green (approved = trusted)
     [Labels.PRIORITY_HIGH]: 'b60205', // Red
     [Labels.PRIORITY_MEDIUM]: 'fbca04', // Yellow
     [Labels.PRIORITY_LOW]: '0052cc', // Blue
@@ -64,4 +66,22 @@ export function isReviewReady(issue: Issue): boolean {
  */
 export function needsDebugging(issue: Issue): boolean {
     return issue.labels.includes(Labels.AI_DEBUGGING);
+}
+
+export function isUserAllowed(issue: Issue, config: Config): boolean {
+    const allowedUsers = config.github.allowedUsers;
+    
+    if (allowedUsers.length === 0) {
+        return true;
+    }
+    
+    if (allowedUsers.includes(issue.author)) {
+        return true;
+    }
+    
+    if (issue.labels.includes(Labels.AI_APPROVED)) {
+        return true;
+    }
+    
+    return false;
 }

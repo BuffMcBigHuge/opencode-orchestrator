@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import process from 'node:process';
 import { loadConfig, Config } from './config.js';
 import { GitHubClient, Issue } from './github/client.js';
-import { Labels, isReadyForPickup, isBlocked } from './github/labels.js';
+import { Labels, isReadyForPickup, isBlocked, isUserAllowed } from './github/labels.js';
 import { TaskManager } from './tasks/manager.js';
 import { WorktreeManager } from './tasks/worktree.js';
 import { OpenCodeServerManager } from './tasks/opencode-server.js';
@@ -148,7 +148,7 @@ class GitHubTaskOrchestrator {
                 break;
             }
 
-            if (isReadyForPickup(issue)) {
+            if (isReadyForPickup(issue) && isUserAllowed(issue, this.config)) {
                 try {
                     await this.taskManager.startTask(issue);
                     logger.info({ issueNumber: issue.number, title: issue.title }, 'Started task');

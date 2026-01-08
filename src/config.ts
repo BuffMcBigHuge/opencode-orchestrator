@@ -14,6 +14,7 @@ const configSchema = z.object({
         token: z.string().min(1, 'GITHUB_TOKEN is required'),
         repo: z.string().regex(/^[^/]+\/[^/]+$/, 'GITHUB_REPO must be in owner/repo format'),
         username: z.string().min(1, 'GITHUB_USERNAME is required'),
+        allowedUsers: z.array(z.string()).default([]),
     }),
 
     // Scheduler
@@ -92,6 +93,14 @@ function parseNumber(value: string | undefined, defaultValue: number): number {
 }
 
 /**
+ * Parse comma-separated string to array of trimmed strings
+ */
+function parseStringArray(value: string | undefined): string[] {
+    if (!value || value.trim() === '') return [];
+    return value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+}
+
+/**
  * Load and validate configuration from environment
  */
 export function loadConfig(): Config {
@@ -100,6 +109,7 @@ export function loadConfig(): Config {
             token: process.env.GITHUB_TOKEN || '',
             repo: process.env.GITHUB_REPO || '',
             username: process.env.GITHUB_USERNAME || '',
+            allowedUsers: parseStringArray(process.env.ALLOWED_USERS),
         },
         scheduler: {
             pollIntervalMs: parseNumber(process.env.POLL_INTERVAL_MS, 300000),
