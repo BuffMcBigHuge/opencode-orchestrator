@@ -25,6 +25,63 @@ This system enables **fully autonomous AI-driven development** where:
 - ✅ **Checkpoint System**: Long-running task state persistence
 - ✅ **Blocking/Continuation**: Human-in-the-loop for clarifications
 - ✅ **Session Sharing**: Full transparency with OpenCode session links
+- ✅ **Multi-Project Support**: Run multiple orchestrator instances for different repositories
+
+## Multi-Project Support
+
+Run **multiple projects simultaneously** by launching separate orchestrator instances for each project. Each instance monitors its own GitHub repository with independent configuration.
+
+### Quick Setup
+
+```bash
+# Create config directories for each project
+mkdir -p configs/project-a configs/project-b
+
+# Create .env for each project
+cat > configs/project-a/.env << EOF
+GITHUB_TOKEN=ghp_xxx
+GITHUB_REPO=myorg/project-a
+GITHUB_USERNAME=myusername
+PROJECT_PATH=/path/to/repos/project-a
+MAX_CONCURRENT_TASKS=2
+EOF
+
+cat > configs/project-b/.env << EOF
+GITHUB_TOKEN=ghp_xxx
+GITHUB_REPO=myorg/project-b
+GITHUB_USERNAME=myusername
+PROJECT_PATH=/path/to/repos/project-b
+MAX_CONCURRENT_TASKS=2
+EOF
+```
+
+### Running Multiple Projects
+
+**Option 1: Separate terminals**
+```bash
+# Terminal 1
+cd /path/to/opencode-orchestrator
+CONFIG_DIR=configs/project-a npm run start:config
+
+# Terminal 2
+CONFIG_DIR=configs/project-b npm run start:config
+```
+
+**Option 2: Background with nohup**
+```bash
+nohup bash -c "CONFIG_DIR=configs/project-a npm run start:config" > project-a.log 2>&1 &
+nohup bash -c "CONFIG_DIR=configs/project-b npm run start:config" > project-b.log 2>&1 &
+```
+
+**Option 3: PM2 (recommended for production)**
+```bash
+npm install -g pm2
+pm2 start dist/index.js --name project-a --cwd configs/project-a
+pm2 start dist/index.js --name project-b --cwd configs/project-b
+pm2 save && pm2 startup
+```
+
+Each instance is fully isolated with its own worktrees, task queue, and configuration.
 
 ## Prerequisites
 
@@ -285,4 +342,4 @@ MIT
 
 ---
 
-**Full Documentation:** See [TECHNICAL_SPECIFICATION_V2.md](../docs/TECHNICAL_SPECIFICATION_V2.md) for complete system design.
+**Full Documentation:** See [docs/TECHNICAL_SPECIFICATION_V2.md](docs/TECHNICAL_SPECIFICATION_V2.md) for complete system design.
